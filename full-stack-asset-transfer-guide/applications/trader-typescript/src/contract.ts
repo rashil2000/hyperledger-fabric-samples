@@ -34,52 +34,51 @@ export class AssetTransfer {
         this.#contract = contract;
     }
 
-    async createAsset(asset: AssetCreate): Promise<void> {
-        await this.#contract.submit('CreateAsset', {
-            arguments: [JSON.stringify(asset)],
+    async addClient(initAmount: number): Promise<void> {
+        await this.#contract.submit('AddClient', {
+            arguments: [initAmount.toString()],
         });
     }
 
-    async getAllAssets(): Promise<Asset[]> {
-        const result = await this.#contract.evaluate('GetAllAssets');
+    async getAllTokens(): Promise<{ id: string, tokens: number }[]> {
+        const result = await this.#contract.evaluate('GetAllTokens');
         if (result.length === 0) {
             return [];
         }
 
-        return JSON.parse(utf8Decoder.decode(result)) as Asset[];
+        return JSON.parse(utf8Decoder.decode(result)) as { id: string, tokens: number }[];
     }
 
-    async readAsset(id: string): Promise<Asset> {
-        const result = await this.#contract.evaluate('ReadAsset', {
-            arguments: [id],
-        });
-        return JSON.parse(utf8Decoder.decode(result)) as Asset;
+    async getTokens(): Promise<number> {
+        const result = await this.#contract.evaluate('GetTokens');
+        return JSON.parse(utf8Decoder.decode(result)) as number;
     }
 
-    async updateAsset(asset: AssetUpdate): Promise<void> {
-        await submitWithRetry(() => this.#contract.submit('UpdateAsset', {
-            arguments: [JSON.stringify(asset)],
+    async putTokens(newAmount: number): Promise<void> {
+        await submitWithRetry(() => this.#contract.submit('PutTokens', {
+            arguments: [newAmount.toString()],
         }));
     }
 
-    async deleteAsset(id: string): Promise<void> {
-        await submitWithRetry(() => this.#contract.submit('DeleteAsset', {
-            arguments: [id],
-        }));
+    async deleteClient(): Promise<void> {
+        await submitWithRetry(() => this.#contract.submit('DeleteClient'));
     }
 
-    async assetExists(id: string): Promise<boolean> {
-        const result = await this.#contract.evaluate('AssetExists', {
-            arguments: [id],
-        });
+    async clientExists(): Promise<boolean> {
+        const result = await this.#contract.evaluate('ClientExists');
         return utf8Decoder.decode(result).toLowerCase() === 'true';
     }
 
-    async transferAsset(id: string, newOwner: string, newOwnerOrg: string): Promise<void> {
-        console.log(`transferring asset '${id}' to ${newOwner}, ${newOwnerOrg}`);
-        // TODO: implement the transferAsset() function.
-        // TODO: submit a 'TransferAsset' transaction, requiring [id, newOwner, newOwnerOrg] arguments.
-        return Promise.reject(new Error('TODO: implement the contract.ts transferAsset() function.'));
+    async contributeResource(data: string): Promise<void> {
+        await this.#contract.submit('ContributeResource', {
+            arguments: [data],
+        });
+    }
+
+    async consumeResource(requiredLength: number): Promise<void> {
+        await this.#contract.submit('ConsumeResource', {
+            arguments: [requiredLength.toString()],
+        });
     }
 }
 

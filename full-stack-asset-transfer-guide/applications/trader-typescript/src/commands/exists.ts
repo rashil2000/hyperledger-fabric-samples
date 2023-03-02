@@ -13,5 +13,7 @@ export default async function main(gateway: Gateway): Promise<void> {
     const contract = network.getContract(CHAINCODE_NAME);
 
     const smartContract = new AssetTransfer(contract);
-    await smartContract.deleteClient();
+    const exists = await smartContract.clientExists();
+    console.log(exists);
 }
+
