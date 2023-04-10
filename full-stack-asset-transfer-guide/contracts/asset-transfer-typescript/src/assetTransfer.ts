@@ -14,9 +14,8 @@ export class AssetTransferContract extends Contract {
      * AddClient adds a new client on the ledger, and gives it some introductory amount of tokens.
      */
     @Transaction()
-    async AddClient(ctx: Context, initAmount: number): Promise<void> {
-        const id = ctx.clientIdentity.getID();
-        const exists = await this.ClientExists(ctx);
+    async AddClient(ctx: Context, id: string, initAmount: number): Promise<void> {
+        const exists = await this.ClientExists(ctx, id);
         if (exists) {
             throw new Error(`The asset ${id} already exists`);
         }
@@ -33,23 +32,21 @@ export class AssetTransferContract extends Contract {
      */
     @Transaction(false)
     @Returns('number')
-    async GetTokens(ctx: Context): Promise<number> {
-        const id = ctx.clientIdentity.getID();
+    async GetTokens(ctx: Context, id: string): Promise<number> {
         const assetBytes = await ctx.stub.getState(id); // get the asset from chaincode state
         if (!assetBytes || assetBytes.length === 0) {
             throw new Error(`Sorry, asset ${id} has not been created`);
         }
 
-        return byteArrayToNumber(assetBytes);
+        return Number(assetBytes);
     }
 
     /**
      * PutTokens updates the amount of tokens belonging to the current client.
      */
     @Transaction()
-    async PutTokens(ctx: Context, newAmount: number): Promise<void> {
-        const id = ctx.clientIdentity.getID();
-        const exists = await this.ClientExists(ctx);
+    async PutTokens(ctx: Context, id: string, newAmount: number): Promise<void> {
+        const exists = await this.ClientExists(ctx, id);
         if (!exists) {
             throw new Error(`The asset ${id} does not exist`);
         }
@@ -66,8 +63,7 @@ export class AssetTransferContract extends Contract {
      */
     @Transaction(false)
     @Returns('boolean')
-    async ClientExists(ctx: Context): Promise<boolean> {
-        const id = ctx.clientIdentity.getID();
+    async ClientExists(ctx: Context, id: string): Promise<boolean> {
         const tokAmount = await ctx.stub.getState(id);
         return tokAmount?.length > 0;
     }
@@ -76,8 +72,7 @@ export class AssetTransferContract extends Contract {
      * DeleteClient removes the current client from the ledger
      */
     @Transaction()
-    async DeleteClient(ctx: Context): Promise<void> {
-        const id = ctx.clientIdentity.getID();
+    async DeleteClient(ctx: Context, id: string): Promise<void> {
         const assetBytes = await ctx.stub.getState(id); // get the asset from chaincode state
         if (!assetBytes || assetBytes.length === 0) {
             throw new Error(`Sorry, asset ${id} has not been created`);
@@ -93,16 +88,16 @@ export class AssetTransferContract extends Contract {
      * Depending on the amount of data, the client will gain some tokens, and this token value will be updated on the ledger.
      */
     @Transaction()
-    async ContributeResource(ctx: Context, data: string): Promise<void> {
-        const exists = await this.ClientExists(ctx);
+    async ContributeResource(ctx: Context, id: string, data: string): Promise<void> {
+        const exists = await this.ClientExists(ctx, id);
         if (!exists) {
-            throw new Error(`The asset ${ctx.clientIdentity.getID()} does not exist`);
+            throw new Error(`The asset ${id} does not exist`);
         }
 
-        const currentTokens = await this.GetTokens(ctx);
+        const currentTokens = await this.GetTokens(ctx, id);
         const newAmount = currentTokens + evaluateObfuscation(data);
 
-        await this.PutTokens(ctx, newAmount);
+        await this.PutTokens(ctx, id, newAmount);
 
         ctx.stub.setEvent('ContributeResource', Buffer.from(newAmount.toString()));
     }
@@ -113,19 +108,19 @@ export class AssetTransferContract extends Contract {
      * The function will return an error if the client does not have a sufficient amount of tokens.
      */
     @Transaction()
-    async ConsumeResource(ctx: Context, requiredLength: number): Promise<void> {
-        const exists = await this.ClientExists(ctx);
+    async ConsumeResource(ctx: Context, id: string, requiredLength: number): Promise<void> {
+        const exists = await this.ClientExists(ctx, id);
         if (!exists) {
-            throw new Error(`The asset ${ctx.clientIdentity.getID()} does not exist`);
+            throw new Error(`The asset ${id} does not exist`);
         }
 
-        const currentTokens = await this.GetTokens(ctx);
+        const currentTokens = await this.GetTokens(ctx, id);
         const newAmount = currentTokens - evaluateDeduction(requiredLength);
         if (newAmount < 0) {
-            throw new Error(`Client ${ctx.clientIdentity.getID()} has insufficient tokens`);
+            throw new Error(`Client ${id} has insufficient tokens`);
         }
 
-        await this.PutTokens(ctx, newAmount);
+        await this.PutTokens(ctx, id, newAmount);
 
         ctx.stub.setEvent('ConsumeResource', Buffer.from(newAmount.toString()));
     }
@@ -141,21 +136,11 @@ export class AssetTransferContract extends Contract {
 
         const assets: { id: string, tokens: number }[] = [];
         for (let result = await iterator.next(); !result.done; result = await iterator.next()) {
-            assets.push({ id: result.value.key, tokens: byteArrayToNumber(result.value.value) });
+            assets.push({ id: result.value.key, tokens: Number(result.value.value) });
         }
 
-        return Buffer.from(toJSON(assets)).toString();
+        return Buffer.from(stringify(sortKeysRecursive(assets))).toString();
     }
-}
-
-function byteArrayToNumber(bArr: Uint8Array): number {
-    let buffer = Buffer.from(bArr);
-    return buffer.readUIntBE(0, bArr.length);
-}
-
-function toJSON(o: object): string {
-    // Insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-    return stringify(sortKeysRecursive(o));
 }
 
 function evaluateObfuscation(data: string): number {
