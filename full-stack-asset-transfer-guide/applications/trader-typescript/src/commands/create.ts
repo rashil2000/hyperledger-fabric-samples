@@ -7,15 +7,20 @@
 import { Gateway } from '@hyperledger/fabric-gateway';
 import { CHAINCODE_NAME, CHANNEL_NAME } from '../config';
 import { AssetTransfer } from '../contract';
-import { assertDefined } from '../utils';
+import { assertAllDefined } from '../utils';
 
 export default async function main(gateway: Gateway, args: string[]): Promise<void> {
-    const requiredLength = assertDefined(args[0], 'Arguments: <requiredLength>');
+    const [assetId, owner, color] = assertAllDefined([args[0], args[1], args[2]], 'Arguments: <assetId> <ownerName> <color>');
 
     const network = gateway.getNetwork(CHANNEL_NAME);
     const contract = network.getContract(CHAINCODE_NAME);
 
     const smartContract = new AssetTransfer(contract);
-    await smartContract.consumeResource(Number(requiredLength));
+    await smartContract.createAsset({
+        ID: assetId,
+        Owner: owner,
+        Color: color,
+        Size: 1,
+        AppraisedValue: 1,
+    });
 }
-

@@ -5,26 +5,22 @@
  */
 
 import { Gateway } from '@hyperledger/fabric-gateway';
-import add from './add';
+import create from './create';
 import deleteCommand from './delete';
-import getAll from './getAll';
+import getAllAssets from './getAllAssets';
 import listen from './listen';
-import get from './get';
-import put from './put';
-import exists from './exists';
-import contribute from './contribute';
-import consume from './consume';
+import read from './read';
+import transact from './transact';
+import transfer from './transfer';
 
 export type Command = (gateway: Gateway, args: string[]) => Promise<void>;
 
 export const commands: Record<string, Command> = {
-    add,
+    create,
     delete: deleteCommand,
-    getAll,
+    getAllAssets,
     listen,
-    get,
-    put,
-    exists,
-    contribute,
-    consume,
+    read,
+    transact,
+    transfer,
 };
