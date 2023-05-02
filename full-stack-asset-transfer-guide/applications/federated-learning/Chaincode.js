@@ -17,26 +17,48 @@ const gateway = connect({
     client
 });
 
-async function Contribute(id, data) {
+async function ContributeResource(id, amount) {
     try {
         await gateway
             .getNetwork(channel)
             .getContract(contract)
-            .submitTransaction('ContributeResource', id, data);
+            .submitTransaction('ContributeResource', id, amount);
     } catch(err) {
         console.error(err);
     }
 }
 
-async function Consume(id, requiredLength) {
+async function ConsumeResource(id, amount) {
     try {
         await gateway
             .getNetwork(channel)
             .getContract(contract)
-            .submitTransaction('ConsumeResource', id, requiredLength.toString());
+            .submitTransaction('ConsumeResource', id, amount);
     } catch(err) {
         console.error(err);
     }
 }
 
-module.exports = { client, gateway, Contribute, Consume };
+async function AddClient(id, amount) {
+    try {
+        await gateway
+            .getNetwork(channel)
+            .getContract(contract)
+            .submitTransaction('AddClient', id, amount);
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+async function DeleteClient(id, amount) {
+    try {
+        await gateway
+            .getNetwork(channel)
+            .getContract(contract)
+            .submitTransaction('DeleteClient', id);
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+module.exports = { client, gateway, ContributeResource, ConsumeResource, AddClient, DeleteClient };

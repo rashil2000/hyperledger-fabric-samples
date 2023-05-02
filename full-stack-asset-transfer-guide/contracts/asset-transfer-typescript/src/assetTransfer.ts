@@ -88,14 +88,14 @@ export class AssetTransferContract extends Contract {
      * Depending on the amount of data, the client will gain some tokens, and this token value will be updated on the ledger.
      */
     @Transaction()
-    async ContributeResource(ctx: Context, id: string, data: string): Promise<void> {
+    async ContributeResource(ctx: Context, id: string, amount: number): Promise<void> {
         const exists = await this.ClientExists(ctx, id);
         if (!exists) {
             throw new Error(`The asset ${id} does not exist`);
         }
 
         const currentTokens = await this.GetTokens(ctx, id);
-        const newAmount = currentTokens + evaluateObfuscation(data);
+        const newAmount = currentTokens + amount;
 
         await this.PutTokens(ctx, id, newAmount);
 
@@ -108,14 +108,14 @@ export class AssetTransferContract extends Contract {
      * The function will return an error if the client does not have a sufficient amount of tokens.
      */
     @Transaction()
-    async ConsumeResource(ctx: Context, id: string, requiredLength: number): Promise<void> {
+    async ConsumeResource(ctx: Context, id: string, amount: number): Promise<void> {
         const exists = await this.ClientExists(ctx, id);
         if (!exists) {
             throw new Error(`The asset ${id} does not exist`);
         }
 
         const currentTokens = await this.GetTokens(ctx, id);
-        const newAmount = currentTokens - evaluateDeduction(requiredLength);
+        const newAmount = currentTokens - amount;
         if (newAmount < 0) {
             throw new Error(`Client ${id} has insufficient tokens`);
         }
@@ -141,14 +141,6 @@ export class AssetTransferContract extends Contract {
 
         return Buffer.from(stringify(sortKeysRecursive(assets))).toString();
     }
-}
-
-function evaluateObfuscation(data: string): number {
-    return Math.ceil(data.length / 10);
-}
-
-function evaluateDeduction(requiredLength: number): number {
-    return Math.ceil(requiredLength / 10);
 }
 
 async function setEndorsingOrgs(ctx: Context, ledgerKey: string, ...orgs: string[]): Promise<void> {
